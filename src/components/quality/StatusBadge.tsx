@@ -52,8 +52,8 @@ export function DispositionBadge({ disposition }: { disposition: Disposition }) 
 
 const approvalTones: Record<ApprovalStatus, Tone> = {
   Approved: "green",
-  "Pending Review": "indigo",
-  Conditional: "amber",
+  Pending: "indigo",
+  Rejected: "red",
 };
 
 export function ApprovalStatusBadge({ status }: { status: ApprovalStatus }) {

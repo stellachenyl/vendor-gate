@@ -10,6 +10,7 @@ const AXES: ReadonlyArray<{ key: keyof KpiScores; label: string }> = [
   { key: "delivery", label: "Delivery" },
   { key: "responsiveness", label: "Resp." },
   { key: "documentation", label: "Docs" },
+  { key: "pricing", label: "Pricing" },
 ];
 
 function pointFor(index: number, value01: number): [number, number] {
@@ -35,7 +36,8 @@ function weightedScore(supplier: Supplier): number {
     k.quality * w.quality +
     k.delivery * w.delivery +
     k.responsiveness * w.responsiveness +
-    k.documentation * w.documentation
+    k.documentation * w.documentation +
+    k.pricing * w.pricing
   );
 }
 
@@ -49,7 +51,7 @@ export function SupplierScorecard({ supplier }: { supplier: Supplier }) {
         <div>
           <h3 className="text-sm font-semibold text-slate-900">{supplier.name}</h3>
           <p className="font-mono text-xs text-slate-500">
-            {supplier.id} · {supplier.partCategory}
+            {supplier.id} · {supplier.category}
           </p>
         </div>
         <div className="text-right">
@@ -61,7 +63,7 @@ export function SupplierScorecard({ supplier }: { supplier: Supplier }) {
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         role="img"
-        aria-label={`KPI radar chart for ${supplier.name}: Quality ${supplier.kpis.quality}, Delivery ${supplier.kpis.delivery}, Responsiveness ${supplier.kpis.responsiveness}, Documentation ${supplier.kpis.documentation}`}
+        aria-label={`KPI radar chart for ${supplier.name}: Quality ${supplier.kpis.quality}, Delivery ${supplier.kpis.delivery}, Responsiveness ${supplier.kpis.responsiveness}, Documentation ${supplier.kpis.documentation}, Pricing ${supplier.kpis.pricing}`}
         className="mx-auto h-56 w-56"
       >
         {/* Grid rings */}

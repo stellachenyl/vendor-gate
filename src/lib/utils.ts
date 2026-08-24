@@ -1,14 +1,43 @@
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 export function cn(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
 }
 
+/** Formats an ISO date as "dd MMM yyyy" in UTC. */
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    timeZone: "UTC",
-  });
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Invalid Date";
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = MONTHS[date.getUTCMonth()];
+  return `${day} ${month} ${date.getUTCFullYear()}`;
+}
+
+function startOfUtcDay(date: Date): number {
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+/**
+ * Whole days between the ISO date and `now` (UTC day boundaries).
+ * Returns 0 for same-day or invalid input.
+ */
+export function daysSince(iso: string, now: Date = new Date()): number {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return 0;
+  return Math.max(0, Math.floor((startOfUtcDay(now) - startOfUtcDay(then)) / 86_400_000));
 }
 
 export function formatCurrency(amount: number): string {
@@ -19,14 +48,11 @@ export function formatCurrency(amount: number): string {
   });
 }
 
-/** Leading characters Excel/LibreOffice interpret as formulas (CWE-1236). */
-const FORMULA_PREFIX = /^[=+\-@\t\r]/;
-
 /** Escapes a single CSV cell, wrapping in quotes when required. */
 function escapeCell(value: string | number): string {
   let str = String(value);
   // Neutralize spreadsheet formula injection by prefixing a single quote.
-  if (FORMULA_PREFIX.test(str)) {
+  if (/^[=+\-@\t\r]/.test(str)) {
     str = "'" + str;
   }
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {

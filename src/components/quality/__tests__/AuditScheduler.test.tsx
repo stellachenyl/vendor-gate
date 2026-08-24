@@ -32,7 +32,7 @@ describe("AuditScheduler", () => {
 
     expect(screen.getByText("August 2026")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: /Aug 24, 2026/i }),
+      screen.getByRole("heading", { name: /24 Aug 2026/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/No audits scheduled on this date/i),
@@ -48,7 +48,7 @@ describe("AuditScheduler", () => {
     // 7 weekday headers + 5 leading blanks (Mon–Fri of the prior week).
     const firstDayCell = cells[7 + 5] as HTMLElement;
     expect(firstDayCell.tagName).toBe("BUTTON");
-    expect(firstDayCell).toHaveAccessibleName(/Aug 01, 2026/);
+    expect(firstDayCell).toHaveAccessibleName(/01 Aug 2026/);
     void container;
   });
 
@@ -56,9 +56,9 @@ describe("AuditScheduler", () => {
     const user = userEvent.setup();
     renderScheduler();
 
-    await user.click(screen.getByRole("button", { name: /Aug 27, 2026, 1 audit/ }));
+    await user.click(screen.getByRole("button", { name: /27 Aug 2026, 1 audit/ }));
 
-    const aside = screen.getByText(/Aug 27, 2026/i).closest("aside");
+    const aside = screen.getByText(/27 Aug 2026/i).closest("aside");
     expect(aside).not.toBeNull();
     expect(within(aside!).getByText("AUD-2631")).toBeInTheDocument();
     expect(within(aside!).getByText("Process Audit")).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe("AuditScheduler", () => {
 
     // Two chips rendered inline; the remainder collapsed into a "+N more".
     const dayButton = screen.getByRole("button", {
-      name: /Aug 27, 2026, 3 audit/,
+      name: /27 Aug 2026, 3 audit/,
     });
     expect(dayButton).toHaveTextContent("+1 more");
   });

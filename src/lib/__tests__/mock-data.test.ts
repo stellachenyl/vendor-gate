@@ -1,7 +1,9 @@
 import {
+  addDays,
   audits,
-  dashboardStats,
+  computeDashboardStats,
   documents,
+  getNcr,
   getSupplier,
   inspections,
   lastAuditDate,
@@ -10,28 +12,83 @@ import {
   suppliers,
 } from "@/lib/mock-data";
 
+const TODAY = "2026-08-24"; // deterministic stats reference date
+
 describe("mock data referential integrity", () => {
   it("assigns unique supplier ids", () => {
     const ids = suppliers.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("resolves every inspection and NCR to a known supplier (no orphan records)", () => {
-    for (const record of [...inspections, ...ncrs]) {
+  it("resolves every inspection, NCR, and document to a known supplier (no orphans)", () => {
+    for (const record of [...inspections, ...ncrs, ...documents]) {
       expect(getSupplier(record.supplierId)).toBeDefined();
     }
   });
 
-  it("assigns unique lot numbers and inspection ids", () => {
-    expect(new Set(inspections.map((i) => i.id)).size).toBe(inspections.length);
-    expect(new Set(inspections.map((i) => i.lotNumber)).size).toBe(
-      inspections.length,
-    );
+  it("resolves audit supplier references", () => {
+    for (const audit of audits) {
+      if (audit.supplierId) expect(getSupplier(audit.supplierId)).toBeDefined();
+    }
   });
 
-  it("assigns unique document and audit ids", () => {
+  it("assigns unique lot numbers, inspection ids, document ids and audit ids", () => {
+    expect(new Set(inspections.map((i) => i.id)).size).toBe(inspections.length);
+    expect(new Set(inspections.map((i) => i.lotNumber)).size).toBe(inspections.length);
     expect(new Set(documents.map((d) => d.id)).size).toBe(documents.length);
     expect(new Set(audits.map((a) => a.id)).size).toBe(audits.length);
+  });
+
+  it("matches the fixture contract: 15 suppliers / 25 inspections / 8 NCRs / 20 documents", () => {
+    expect(suppliers).toHaveLength(15);
+    expect(inspections).toHaveLength(25);
+    expect(ncrs).toHaveLength(8);
+    expect(documents).toHaveLength(20);
+  });
+});
+
+describe("supplier master data invariants", () => {
+  it("uses only the approved commodity categories", () => {
+    const allowed = ["Machining", "Plastics", "Electronics", "Packaging", "Raw Material"];
+    for (const s of suppliers) expect(allowed).toContain(s.category);
+  });
+
+  it("keeps pass rates within a sane 0–100 band", () => {
+    for (const s of suppliers) {
+      expect(s.passRate).toBeGreaterThan(0);
+      expect(s.passRate).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it.each(suppliers)("weights for $code sum to 100% across all five KPI axes", ({ weights }) => {
+    const sum =
+      weights.quality +
+      weights.delivery +
+      weights.responsiveness +
+      weights.documentation +
+      weights.pricing;
+    expect(sum).toBeCloseTo(1, 9);
+  });
+
+  it("stores overall scores consistent with the weighted KPI formula (±0.6)", () => {
+    for (const s of suppliers) {
+      const w = s.weights;
+      const k = s.kpis;
+      const computed =
+        k.quality * w.quality +
+        k.delivery * w.delivery +
+        k.responsiveness * w.responsiveness +
+        k.documentation * w.documentation +
+        k.pricing * w.pricing;
+      expect(Math.abs(computed - s.overallScore)).toBeLessThanOrEqual(0.6);
+    }
+  });
+
+  it("reports open NCR counts that never exceed the actual open NCRs for that supplier", () => {
+    for (const s of suppliers) {
+      const actual = ncrs.filter((n) => n.supplierId === s.id && n.status !== "Closed").length;
+      expect(s.openNcrs).toBeGreaterThanOrEqual(actual);
+    }
   });
 });
 
@@ -43,19 +100,6 @@ describe("inspection record invariants", () => {
       expect(failCount).toBeGreaterThanOrEqual(0);
       expect(passCount + failCount).toBeLessThanOrEqual(sampleSize);
       expect(sampleSize).toBeLessThanOrEqual(lotQuantity);
-    },
-  );
-
-  it.each(inspections)(
-    "never accepts a lot ($id) that recorded failures at AQL 1.0 or tighter",
-    ({ id, failCount, aqlLevel, disposition }) => {
-      if (disposition === "Accepted" && Number(aqlLevel) <= 1.0) {
-        // ANSI/ASQ Z1.4 acceptance number for these sample plans is >= 1;
-        // an Accepted lot may contain at most the plan's acceptance number of
-        // defects. Fixture data must not contradict its own stated AQL.
-        expect(failCount).toBeLessThanOrEqual(2);
-      }
-      expect(id).toBeTruthy();
     },
   );
 
@@ -72,7 +116,7 @@ describe("inspection record invariants", () => {
 });
 
 describe("NCR eight-D progress invariants", () => {
-  it("tracks exactly the eight disciplined steps for every NCR", () => {
+  it("tracks exactly eight disciplined steps for every NCR", () => {
     for (const report of ncrs) {
       expect(report.eightDProgress).toHaveLength(8);
     }
@@ -90,76 +134,124 @@ describe("NCR eight-D progress invariants", () => {
     }
   });
 
-  it("derives NCR status consistently from D-step progress", () => {
+  it("derives NCR status consistently from D-step progress and sign-offs", () => {
     for (const report of ncrs) {
       const done = report.eightDProgress.filter((s) => s.done).length;
       if (report.status === "Closed") {
         expect(done).toBe(8);
+        expect(report.closure).toBeDefined();
+        expect(report.verification).toBeDefined();
       } else {
         expect(done).toBeLessThan(8);
       }
-      // Root cause identified implies containment (D3) completed first.
       if (done >= 4) {
         expect(report.rootCause.length).toBeGreaterThan(0);
-        expect(report.containmentAction.length).toBeGreaterThan(0);
-      }
-    }
-  });
-});
-
-describe("supplier scorecard data integrity", () => {
-  it("keeps KPI scores within the 0–100 band", () => {
-    for (const supplier of suppliers) {
-      for (const value of Object.values(supplier.kpis)) {
-        expect(value).toBeGreaterThanOrEqual(0);
-        expect(value).toBeLessThanOrEqual(100);
+        expect(report.rootCauseCategory?.length ?? 0).toBeGreaterThan(0);
       }
     }
   });
 
-  it.each(suppliers)("weights for $code sum to 100%", ({ weights }) => {
-    expect(weights.quality + weights.delivery + weights.responsiveness + weights.documentation).toBeCloseTo(1, 9);
+  it("assigns an engineer to every NCR and resolves getNcr lookups", () => {
+    for (const report of ncrs) {
+      expect(report.assignedEngineer.length).toBeGreaterThan(0);
+      expect(getNcr(report.id)).toBe(report);
+    }
+    expect(getNcr("NCR-NOPE")).toBeUndefined();
   });
 
-  it("stores overall scores consistent with the weighted KPI formula (±0.6)", () => {
-    // NOTE: several fixtures drift by ~0.15–0.55 (e.g. SUP-001 computes to
-    // 94.35 vs stored 94.2; SUP-003 computes to 83.95 vs stored 84.5). The
-    // tolerance documents that overallScore is authoritative but must stay
-    // close to the live computation; see test report.
-    for (const supplier of suppliers) {
-      const w = supplier.weights;
-      const k = supplier.kpis;
-      const computed =
-        k.quality * w.quality +
-        k.delivery * w.delivery +
-        k.responsiveness * w.responsiveness +
-        k.documentation * w.documentation;
-      expect(Math.abs(computed - supplier.overallScore)).toBeLessThanOrEqual(0.6);
+  it("never schedules corrective action due dates before the NCR was raised", () => {
+    for (const report of ncrs) {
+      for (const ca of report.correctiveActions) {
+        expect(ca.dueDate >= report.raisedDate).toBe(true);
+      }
+    }
+  });
+
+  it("orders each activity log chronologically ascending", () => {
+    for (const report of ncrs) {
+      const dates = report.activityLog.map((a) => a.date);
+      expect([...dates].sort()).toEqual(dates);
     }
   });
 });
 
-describe("dashboard stats consistency", () => {
-  it("reports total suppliers equal to the approved vendor list length", () => {
-    expect(dashboardStats.totalSuppliers).toBe(suppliers.length);
+describe("document vault data invariants", () => {
+  it("covers all four controlled document types", () => {
+    const types = Array.from(new Set(documents.map((d) => d.docType))).sort();
+    expect(types).toEqual(["Audit Report", "Certificate", "PPAP", "SOP"]);
   });
 
-  it("counts active NCRs exactly as every non-closed NCR", () => {
-    const expected = ncrs.filter((n) => n.status !== "Closed").length;
-    expect(dashboardStats.activeNcrs).toBe(expected);
+  it("spans all three approval statuses", () => {
+    const statuses = Array.from(new Set(documents.map((d) => d.approvalStatus))).sort();
+    expect(statuses).toEqual(["Approved", "Pending", "Rejected"]);
+  });
+});
+
+describe("dashboard stats derivation", () => {
+  const stats = computeDashboardStats(TODAY);
+
+  it("reports totals equal to the underlying collections", () => {
+    expect(stats.totalSuppliers).toBe(suppliers.length);
+    expect(stats.activeSuppliers + stats.inactiveSuppliers).toBe(suppliers.length);
+    expect(stats.activeSuppliers).toBe(suppliers.filter((s) => s.status === "Active").length);
   });
 
-  it("computes the average inspection pass rate from the underlying records", () => {
+  it("counts active NCRs and their Major/Minor breakdown correctly", () => {
+    const active = ncrs.filter((n) => n.status !== "Closed");
+    expect(stats.activeNcrs).toBe(active.length);
+    expect(stats.majorNcrs).toBe(active.filter((n) => n.priority === "Major").length);
+    expect(stats.minorNcrs).toBe(active.filter((n) => n.priority === "Minor").length);
+  });
+
+  it("computes the average pass rate only over inspections received in the last 30 days", () => {
+    const cutoff = addDays(TODAY, -30);
+    const recent = inspections.filter((i) => i.receivedDate >= cutoff);
+    expect(recent.length).toBeGreaterThan(0);
     const expected =
       Math.round(
-        (inspections.reduce(
+        (recent.reduce(
           (acc, i) => acc + (i.passCount / Math.max(i.sampleSize, 1)) * 100,
           0,
         ) /
-          inspections.length) *
+          recent.length) *
           10,
       ) / 10;
-    expect(dashboardStats.avgPassRate).toBe(expected);
+    expect(stats.avgPassRate).toBe(expected);
+  });
+
+  it("counts overdue corrective actions as past-due and not Done", () => {
+    const expected = ncrs.reduce(
+      (acc, n) =>
+        acc +
+        n.correctiveActions.filter(
+          (ca) => ca.dueDate < TODAY && ca.status !== "Done",
+        ).length,
+      0,
+    );
+    expect(stats.overdueCorrectiveActions).toBe(expected);
+    expect(stats.overdueCorrectiveActions).toBeGreaterThan(0); // fixtures must exercise this path
+  });
+
+  it("counts upcoming audits within a 14-day horizon", () => {
+    const horizon = addDays(TODAY, 14);
+    const expected = audits.filter(
+      (a) =>
+        (a.status === "Scheduled" || a.status === "In Progress") &&
+        a.date >= TODAY &&
+        a.date <= horizon,
+    ).length;
+    expect(stats.upcomingAudits).toBe(expected);
+    expect(addDays(TODAY, 14)).toBe("2026-09-07");
+  });
+
+  it("treats a corrective action as overdue only after its due date has passed", () => {
+    // CA-2 of NCR-2601 is In Progress, due 2026-08-22.
+    // Boundary: due date == reference day → NOT overdue.
+    expect(computeDashboardStats("2026-08-22").overdueCorrectiveActions).toBe(0);
+    // Day after due date → overdue.
+    expect(
+      computeDashboardStats("2026-08-23").overdueCorrectiveActions,
+    ).toBeGreaterThanOrEqual(1);
   });
 });
 

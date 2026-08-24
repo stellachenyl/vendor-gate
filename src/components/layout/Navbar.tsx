@@ -10,7 +10,7 @@ import type { UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/", label: "Dashboard" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/inspections", label: "Inspections" },
   { href: "/ncrs", label: "NCRs" },
@@ -170,7 +170,7 @@ export function Navbar() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </form>
-          <Button onClick={() => router.push("/ncrs/new")}>+ New NCR</Button>
+          <Button onClick={() => router.push("/ncrs?new=1")}>+ New NCR</Button>
           <RoleMenu />
         </div>
       </div>

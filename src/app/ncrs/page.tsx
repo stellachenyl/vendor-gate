@@ -1,18 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { NonConformanceReportCard } from "@/components/quality/NonConformanceReport";
-import { PriorityBadge } from "@/components/quality/PriorityBadge";
-import { StatusBadge } from "@/components/quality/StatusBadge";
-import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
-import { Input, Select, Textarea } from "@/components/ui/FormControls";
-import { useToast } from "@/components/ui/Toast";
-import { ncrs, getSupplier } from "@/lib/mock-data";
+import { NewNcrWizard } from "@/components/forms/NewNcrWizard";
+import { Select, Input } from "@/components/ui/FormControls";
+import { ncrs, suppliers } from "@/lib/mock-data";
 import { useRole } from "@/lib/role-context";
 import type { NcrStatus, Priority } from "@/lib/types";
 
-const PRIORITIES: Priority[] = ["Critical", "Major", "Minor", "Observation"];
+const PRIORITIES: Array<Priority | "All"> = [
+  "All",
+  "Critical",
+  "Major",
+  "Minor",
+  "Observation",
+];
 const STATUSES: Array<NcrStatus | "All"> = [
   "All",
   "Open",
@@ -23,150 +26,134 @@ const STATUSES: Array<NcrStatus | "All"> = [
   "Closed",
 ];
 
-function NewNcrModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { showToast } = useToast();
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Raise Nonconformance Report"
-      description="D2 problem description is required at minimum. The supplier QSR is notified automatically."
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              onClose();
-              showToast(
-                "NCR draft saved and routed to Supplier Quality Engineering.",
-                "success",
-              );
-            }}
-          >
-            Submit NCR
-          </Button>
-        </>
-      }
-    >
-      <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
-        <Input label="Part Number" placeholder="e.g. TNX-3320-D" />
-        <Select
-          label="Supplier"
-          options={[
-            { value: "", label: "Select supplier…" },
-            ...Array.from(new Set(ncrs.map((n) => n.supplierId))).map((id) => ({
-              value: id,
-              label: `${getSupplier(id)?.name ?? id} (${id})`,
-            })),
-          ]}
-        />
-        <Select
-          label="Priority"
-          options={PRIORITIES.map((p) => ({ value: p, label: p }))}
-          defaultValue="Major"
-        />
-        <Textarea
-          label="Defect Description (D2)"
-          placeholder="Describe the nonconformance: characteristic affected, measured vs. specified, detection point…"
-        />
-        <Textarea
-          label="Interim Containment (D3, if known)"
-          placeholder="Quarantine location, stock verification, line-side actions…"
-        />
-      </form>
-    </Modal>
-  );
-}
-
-export default function NcrsPage() {
+function NcrsPageContent() {
   const { canView, role } = useRole();
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>("All");
-  const [modalOpen, setModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+
+  const [statusFilter, setStatusFilter] = useState<NcrStatus | "All">("All");
+  const [severityFilter, setSeverityFilter] = useState<Priority | "All">("All");
+  const [supplierFilter, setSupplierFilter] = useState("All");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [wizardOpen, setWizardOpen] = useState(searchParams.get("new") === "1");
 
   const visible = useMemo(() => ncrs.filter((n) => canView(n.supplierId)), [canView]);
 
   const filtered = useMemo(
     () =>
       [...visible]
-        .filter((n) => statusFilter === "All" || n.status === statusFilter)
+        .filter((n) => {
+          if (statusFilter !== "All" && n.status !== statusFilter) return false;
+          if (severityFilter !== "All" && n.priority !== severityFilter) return false;
+          if (supplierFilter !== "All" && n.supplierId !== supplierFilter) return false;
+          if (dateFrom && n.raisedDate < dateFrom) return false;
+          if (dateTo && n.raisedDate > dateTo) return false;
+          return true;
+        })
         .sort((a, b) => b.raisedDate.localeCompare(a.raisedDate)),
-    [visible, statusFilter],
+    [visible, statusFilter, severityFilter, supplierFilter, dateFrom, dateTo],
   );
 
-  const byStatus = (s: NcrStatus) =>
-    [...visible]
-      .filter((n) => n.status === s)
-      .map((n) => ({ id: n.id, priority: n.priority, title: n.title }));
+  const wizardSupplier = searchParams.get("supplier") ?? "";
+  const wizardPart = searchParams.get("part") ?? "";
 
   return (
     <>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="page-title">Nonconformance Reports — 8D Tracker</h1>
+          <h1 className="page-title">NCR Management — 8D Corrective Action</h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            {role} view · Corrective actions follow the 8D methodology per IATF 16949
-            §10.2.
+            {role} view · Nonconformances follow the 8D methodology per IATF 16949 §10.2.
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>+ New NCR</Button>
+        <button
+          type="button"
+          onClick={() => setWizardOpen(true)}
+          className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        >
+          + New NCR
+        </button>
       </div>
 
-      {/* Status board summary */}
-      <section
-        aria-label="NCR pipeline"
-        className="card mb-5 grid grid-cols-2 gap-px overflow-hidden bg-line sm:grid-cols-6"
+      {/* Filters */}
+      <form
+        aria-label="NCR filters"
+        onSubmit={(e) => e.preventDefault()}
+        className="card mb-5 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6"
       >
-        {STATUSES.slice(1).map((status) => (
-          <button
-            key={status}
-            type="button"
-            onClick={() => setStatusFilter(statusFilter === status ? "All" : status)}
-            aria-pressed={statusFilter === status}
-            className={`flex flex-col gap-1.5 bg-card px-3 py-3 text-left transition-colors hover:bg-accent-soft/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${
-              statusFilter === status ? "bg-accent-soft" : ""
-            }`}
-          >
-            <StatusBadge status={status as NcrStatus} />
-            <span className="font-mono text-xl font-bold text-slate-800">
-              {byStatus(status as NcrStatus).length}
-            </span>
-          </button>
-        ))}
-      </section>
-
-      <p className="mb-3 text-xs text-slate-500">
-        Showing <span className="font-mono">{filtered.length}</span> of{" "}
-        <span className="font-mono">{visible.length}</span> reports.
-        {statusFilter !== "All" ? " Filtered by status." : ""}
-      </p>
+        <Select
+          aria-label="Filter by status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as NcrStatus | "All")}
+          options={STATUSES.map((s) => ({ value: s, label: s === "All" ? "All statuses" : s }))}
+        />
+        <Select
+          aria-label="Filter by severity"
+          value={severityFilter}
+          onChange={(e) => setSeverityFilter(e.target.value as Priority | "All")}
+          options={PRIORITIES.map((p) => ({
+            value: p,
+            label: p === "All" ? "All severities" : p,
+          }))}
+        />
+        <Select
+          aria-label="Filter by supplier"
+          value={supplierFilter}
+          onChange={(e) => setSupplierFilter(e.target.value)}
+          options={[
+            { value: "All", label: "All suppliers" },
+            ...suppliers.map((s) => ({ value: s.id, label: `${s.name} (${s.code})` })),
+          ]}
+        />
+        <Input
+          label="Raised from"
+          type="date"
+          aria-label="Raised from date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+        />
+        <Input
+          label="Raised to"
+          type="date"
+          aria-label="Raised to date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+        />
+        <p className="self-end text-xs text-slate-500">
+          Showing <span className="font-mono font-semibold">{filtered.length}</span> of{" "}
+          <span className="font-mono">{visible.length}</span> reports
+        </p>
+      </form>
 
       <div className="space-y-4">
         {filtered.map((ncr) => (
           <NonConformanceReportCard key={ncr.id} ncr={ncr} />
         ))}
         {filtered.length === 0 ? (
-          <p className="card px-4 py-10 text-center text-sm text-slate-400">
-            No NCRs match the selected filter. Clear the status board selection to see all
-            records.
+          <p
+            role="status"
+            className="card px-4 py-10 text-center text-sm text-slate-400"
+          >
+            No NCRs match the current filters.
           </p>
         ) : null}
       </div>
 
-      {/* Recent activity strip for context */}
-      <section aria-label="Priority summary" className="mt-6 flex flex-wrap gap-2">
-        {PRIORITIES.map((p) => (
-          <span key={p} className="card inline-flex items-center gap-2 px-3 py-2 text-xs">
-            <PriorityBadge priority={p} />
-            <span className="font-mono font-semibold text-slate-700">
-              {visible.filter((n) => n.priority === p).length}
-            </span>
-          </span>
-        ))}
-      </section>
-
-      <NewNcrModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <NewNcrWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        initialSupplierId={wizardSupplier}
+        initialPartNumber={wizardPart}
+      />
     </>
+  );
+}
+
+export default function NcrsPage() {
+  // useSearchParams requires a Suspense boundary during static prerender.
+  return (
+    <Suspense fallback={null}>
+      <NcrsPageContent />
+    </Suspense>
   );
 }

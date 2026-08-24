@@ -11,15 +11,31 @@ export type NcrStatus =
   | "Closed";
 
 export type Disposition =
-  "Accepted" | "Rejected" | "Use As Is" | "Rework" | "Return to Supplier";
+  | "Accepted"
+  | "Rejected"
+  | "Use As Is"
+  | "Rework"
+  | "Return to Supplier";
 
 export type AqlLevel = "0.65" | "1.0" | "1.5" | "2.5" | "4.0";
+
+export type SupplierCategory =
+  | "Machining"
+  | "Plastics"
+  | "Electronics"
+  | "Packaging"
+  | "Raw Material";
+
+export type SupplierStatus = "Active" | "Inactive";
+
+export type Trend = "improving" | "stable" | "declining";
 
 export interface KpiScores {
   quality: number;
   delivery: number;
   responsiveness: number;
   documentation: number;
+  pricing: number;
 }
 
 export type KpiWeights = KpiScores;
@@ -28,9 +44,17 @@ export interface Supplier {
   id: string;
   name: string;
   code: string;
+  category: SupplierCategory;
   riskTier: RiskTier;
-  partCategory: string;
+  /** Rolling 90-day goods-in pass rate, percent. */
+  passRate: number;
+  openNcrs: number;
+  lastAuditDate: string | null;
+  status: SupplierStatus;
+  trend: Trend;
+  contactName: string;
   contactEmail: string;
+  phone: string;
   location: string;
   overallScore: number;
   kpis: KpiScores;
@@ -64,28 +88,60 @@ export interface NcrStep {
   done: boolean;
 }
 
+export interface CorrectiveAction {
+  id: string;
+  action: string;
+  owner: string;
+  dueDate: string;
+  status: "Planned" | "In Progress" | "Done";
+}
+
+export interface ActivityEntry {
+  date: string;
+  actor: string;
+  event: string;
+}
+
+export interface SignOff {
+  by: string;
+  date: string;
+}
+
 export interface NonConformanceReport {
   id: string;
   supplierId: string;
   partNumber: string;
+  lotNumber?: string;
   title: string;
   defectDescription: string;
   priority: Priority;
   status: NcrStatus;
   raisedDate: string;
   raisedBy: string;
+  assignedEngineer: string;
+  rootCauseCategory?: string;
   containmentAction: string;
+  containmentEvidence: string[];
   rootCause: string;
+  eightDTeam: string[];
+  correctiveActions: CorrectiveAction[];
+  verification?: SignOff;
+  closure?: SignOff;
   quantityAffected: number;
   costImpactUsd: number;
   eightDProgress: NcrStep[];
+  activityLog: ActivityEntry[];
 }
 
-export type ApprovalStatus = "Approved" | "Pending Review" | "Conditional";
+export type DocType = "Certificate" | "PPAP" | "Audit Report" | "SOP";
+
+export type ApprovalStatus = "Approved" | "Pending" | "Rejected";
 
 export interface VaultDocument {
   id: string;
   name: string;
+  docType: DocType;
+  supplierId: string;
   version: string;
   uploadedDate: string;
   uploadedBy: string;
@@ -95,7 +151,10 @@ export interface VaultDocument {
 }
 
 export type AuditType =
-  "System Audit" | "Process Audit" | "Product Audit" | "Surveillance Audit";
+  | "System Audit"
+  | "Process Audit"
+  | "Product Audit"
+  | "Surveillance Audit";
 
 export type AuditStatus = "Scheduled" | "Completed" | "Overdue" | "In Progress";
 
@@ -107,13 +166,20 @@ export interface AuditEntry {
   date: string; // ISO date
   status: AuditStatus;
   supplierId?: string;
+  findingsSummary?: string;
+  closureStatus?: "Closed" | "Open";
 }
 
 export interface DashboardStats {
   totalSuppliers: number;
-  activeNcrs: number;
+  activeSuppliers: number;
+  inactiveSuppliers: number;
   avgPassRate: number;
+  activeNcrs: number;
+  majorNcrs: number;
+  minorNcrs: number;
   overdueCorrectiveActions: number;
+  upcomingAudits: number;
 }
 
 export type UserRole = "Quality Manager" | "Supplier User";

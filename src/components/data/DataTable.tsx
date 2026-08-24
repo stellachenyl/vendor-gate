@@ -22,6 +22,8 @@ interface DataTableProps<T> {
   pageSize?: number;
   csvFilename: string;
   caption?: string;
+  /** Makes rows clickable/keyboard-activatable (e.g. navigate to detail). */
+  onRowClick?: (row: T) => void;
 }
 
 type SortState = { key: string; direction: "asc" | "desc" } | null;
@@ -33,6 +35,7 @@ export function DataTable<T>({
   pageSize = 8,
   csvFilename,
   caption,
+  onRowClick,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortState>(null);
@@ -159,7 +162,24 @@ export function DataTable<T>({
               pageRows.map((row) => (
                 <tr
                   key={rowKey(row)}
-                  className="border-b border-line last:border-b-0 hover:bg-accent-soft/40"
+                  className={cn(
+                    "border-b border-line last:border-b-0",
+                    onRowClick
+                      ? "cursor-pointer hover:bg-accent-soft/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                      : "hover:bg-accent-soft/40",
+                  )}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onRowClick(row);
+                          }
+                        }
+                      : undefined
+                  }
                 >
                   {columns.map((col) => (
                     <td

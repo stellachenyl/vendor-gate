@@ -30,10 +30,13 @@ export function Modal({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
-    // Focus the dialog panel for keyboard users
+    // Focus the dialog panel for keyboard users. Deliberately keyed on
+    // `open` only: re-running this on an unstable `onClose` identity would
+    // steal focus from inner inputs on every parent re-render while typing.
     panelRef.current?.focus();
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 

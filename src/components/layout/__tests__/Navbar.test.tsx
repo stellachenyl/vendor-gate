@@ -7,7 +7,7 @@ const mockPush = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn(), refresh: jest.fn() }),
-  usePathname: () => "/",
+  usePathname: () => "/dashboard",
 }));
 
 function renderNavbar() {
@@ -77,7 +77,7 @@ describe("Navbar global search", () => {
     renderNavbar();
 
     await user.click(screen.getByRole("button", { name: /New NCR/i }));
-    expect(mockPush).toHaveBeenCalledWith("/ncrs/new");
+    expect(mockPush).toHaveBeenCalledWith("/ncrs?new=1");
   });
 });
 

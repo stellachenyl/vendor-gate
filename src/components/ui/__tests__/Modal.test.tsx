@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/FormControls";
 
 const onClose = jest.fn();
 

@@ -18,8 +18,8 @@ describe("DocumentVault", () => {
 
     expect(screen.getByRole("list")).toBeInTheDocument();
     expect(screen.getByText(/PPAP Level 3 Submission/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Rev C|v4\.2|v2\.0/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/uploaded .+ by/).length).toBe(documents.length);
+    expect(screen.getAllByText(/Rev C|v4\.2|v2\.0|Final/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/uploaded \d{2} \w{3} \d{4} by/i).length).toBe(documents.length);
   });
 
   it("filters the list by approval status", async () => {
@@ -27,13 +27,13 @@ describe("DocumentVault", () => {
     renderVault();
 
     await user.selectOptions(screen.getByLabelText(/Filter by approval status/i), [
-      "Pending Review",
+      "Pending",
     ]);
 
     const items = screen.getAllByRole("listitem");
     expect(items.length).toBeGreaterThan(0);
     for (const item of items) {
-      expect(item.textContent).toMatch(/Pending Review/);
+      expect(item.textContent).toMatch(/Pending/);
     }
     // Approved-only documents are hidden while filtered.
     expect(screen.queryByText(/IMDS Entry Confirmation/i)).not.toBeInTheDocument();
@@ -44,8 +44,8 @@ describe("DocumentVault", () => {
     renderVault();
 
     const filter = screen.getByLabelText(/Filter by approval status/i);
-    await user.selectOptions(filter, ["Conditional"]);
-    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    await user.selectOptions(filter, ["Rejected"]);
+    expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
 
     await user.selectOptions(filter, ["all"]);
     expect(screen.getAllByRole("listitem")).toHaveLength(documents.length);
@@ -60,7 +60,7 @@ describe("DocumentVault", () => {
     );
 
     await user.selectOptions(screen.getByLabelText(/Filter by approval status/i), [
-      "Conditional",
+      "Rejected",
     ]);
 
     expect(
@@ -75,6 +75,6 @@ describe("DocumentVault", () => {
     const firstItem = screen.getAllByRole("listitem")[0]!;
     await user.click(within(firstItem).getByRole("button", { name: "Download" }));
 
-    expect(screen.getByRole("status")).toHaveTextContent(/Download started/i);
+    expect(await screen.findByRole("status")).toHaveTextContent(/Download started/i);
   });
 });

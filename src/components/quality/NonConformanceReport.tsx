@@ -1,63 +1,19 @@
 import type { NonConformanceReport } from "@/lib/types";
 import { getSupplier } from "@/lib/mock-data";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, daysSince, formatCurrency, formatDate } from "@/lib/utils";
 import { PriorityBadge, RiskTierBadge } from "./PriorityBadge";
 import { StatusBadge } from "./StatusBadge";
+import { EightDStepper } from "./EightDStepper";
 
-function EightDTracker({
-  progress,
+export function NonConformanceReportCard({
+  ncr,
+  today = new Date(),
 }: {
-  progress: NonConformanceReport["eightDProgress"];
+  ncr: NonConformanceReport;
+  today?: Date;
 }) {
-  const doneCount = progress.filter((s) => s.done).length;
-  return (
-    <div
-      role="group"
-      aria-label={`8D progress: ${doneCount} of ${progress.length} steps complete`}
-    >
-      <ol className="flex flex-wrap gap-x-1 gap-y-2">
-        {progress.map((step, i) => (
-          <li key={step.step} className="flex min-w-[72px] flex-1 items-center">
-            <div className="flex w-full flex-col items-center text-center">
-              <span
-                aria-hidden
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full border-2 text-[10px] font-bold",
-                  step.done
-                    ? "border-status-approved bg-status-approved text-white"
-                    : "border-line bg-slate-50 text-slate-400",
-                )}
-              >
-                {step.step.replace("D", "")}
-              </span>
-              <span
-                className={cn(
-                  "mt-1 text-[10px] leading-tight",
-                  step.done ? "text-slate-700" : "text-slate-400",
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
-            {i < progress.length - 1 ? (
-              <span
-                aria-hidden
-                className={cn(
-                  "mx-0.5 mb-4 h-0.5 flex-1 rounded",
-                  step.done ? "bg-status-approved" : "bg-line",
-                )}
-              />
-            ) : null}
-          </li>
-        ))}
-      </ol>
-      <p className="sr-only">{`${doneCount} of 8D steps complete`}</p>
-    </div>
-  );
-}
-
-export function NonConformanceReportCard({ ncr }: { ncr: NonConformanceReport }) {
   const supplier = getSupplier(ncr.supplierId);
+  const daysOpen = daysSince(ncr.raisedDate, today);
 
   return (
     <article
@@ -70,57 +26,65 @@ export function NonConformanceReportCard({ ncr }: { ncr: NonConformanceReport })
             <h3 className="font-mono text-sm font-bold text-slate-900">{ncr.id}</h3>
             <PriorityBadge priority={ncr.priority} />
             <StatusBadge status={ncr.status} />
+            {daysOpen > 0 ? (
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold",
+                  daysOpen > 30 && ncr.status !== "Closed"
+                    ? "border-red-300 bg-red-50 text-red-700"
+                    : "border-slate-300 bg-slate-100 text-slate-600",
+                )}
+              >
+                {daysOpen}d open
+              </span>
+            ) : null}
           </div>
           <p className="mt-1 text-sm font-semibold text-slate-800">{ncr.title}</p>
           <p className="font-mono text-xs text-slate-500">
-            P/N {ncr.partNumber} · <RiskTierBadge tier={supplier?.riskTier ?? "Medium"} />{" "}
+            P/N {ncr.partNumber} ·{" "}
+            <RiskTierBadge tier={supplier?.riskTier ?? "Medium"} />{" "}
             <span className="ml-1 align-middle">{supplier?.name ?? ncr.supplierId}</span>
           </p>
         </div>
         <div className="text-right text-xs text-slate-500">
           Raised {formatDate(ncr.raisedDate)}
           <br />
-          <span className="font-mono">
-            Qty affected: {ncr.quantityAffected.toLocaleString()}
-          </span>
+          <span className="font-mono">Qty affected: {ncr.quantityAffected.toLocaleString()}</span>
           <br />
-          <span className="font-mono">
-            Cost impact: {formatCurrency(ncr.costImpactUsd)}
-          </span>
+          <span className="font-mono">Cost impact: {formatCurrency(ncr.costImpactUsd)}</span>
         </div>
       </header>
 
-      <EightDTracker progress={ncr.eightDProgress} />
+      <EightDStepper progress={ncr.eightDProgress} />
 
       <dl className="mt-4 space-y-3 border-t border-line pt-3 text-sm">
         <div>
           <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
             Defect Description
           </dt>
-          <dd className="mt-0.5 leading-relaxed text-slate-700">
+          <dd className="mt-0.5 line-clamp-2 leading-relaxed text-slate-700">
             {ncr.defectDescription}
           </dd>
         </div>
-        <div>
-          <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Containment Action
-          </dt>
-          <dd className="mt-0.5 leading-relaxed text-slate-700">
-            {ncr.containmentAction || "Pending assignment."}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Root Cause
-          </dt>
-          <dd className="mt-0.5 leading-relaxed text-slate-700">
-            {ncr.rootCause || "Under investigation — D4 in progress."}
-          </dd>
+        <div className="flex flex-wrap gap-x-8 gap-y-2">
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Assigned Engineer
+            </dt>
+            <dd className="mt-0.5 font-medium text-slate-700">{ncr.assignedEngineer}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Root Cause Category
+            </dt>
+            <dd className="mt-0.5 text-slate-700">{ncr.rootCauseCategory || "Under investigation"}</dd>
+          </div>
         </div>
       </dl>
 
-      <footer className="mt-3 font-mono text-xs text-slate-400">
-        Raised by {ncr.raisedBy}
+      <footer className="mt-3 flex flex-wrap justify-between gap-2 border-t border-line pt-3 font-mono text-xs text-slate-400">
+        <span>Raised by {ncr.raisedBy}</span>
+        <span>Team: {ncr.eightDTeam.length} member(s)</span>
       </footer>
     </article>
   );

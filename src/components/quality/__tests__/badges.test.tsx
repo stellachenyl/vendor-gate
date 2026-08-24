@@ -32,11 +32,7 @@ const ALL_DISPOSITIONS: Disposition[] = [
   "Rework",
   "Return to Supplier",
 ];
-const ALL_APPROVALS: ApprovalStatus[] = [
-  "Approved",
-  "Pending Review",
-  "Conditional",
-];
+const ALL_APPROVALS: ApprovalStatus[] = ["Approved", "Pending", "Rejected"];
 const ALL_AUDIT_STATUSES: AuditStatus[] = [
   "Scheduled",
   "Completed",

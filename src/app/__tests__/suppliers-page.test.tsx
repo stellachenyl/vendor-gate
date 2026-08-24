@@ -2,18 +2,22 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SuppliersPage from "@/app/suppliers/page";
 import { RoleProvider } from "@/lib/role-context";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const mockSearchParams: Record<string, string> = {};
 
 jest.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(mockSearchParams),
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 function renderPage() {
   return render(
-    <RoleProvider>
-      <SuppliersPage />
-    </RoleProvider>,
+    <ToastProvider>
+      <RoleProvider>
+        <SuppliersPage />
+      </RoleProvider>
+    </ToastProvider>,
   );
 }
 
@@ -54,7 +58,7 @@ describe("Suppliers page search integration", () => {
     mockSearchParams["q"] = "ironbridge";
     renderPage();
 
-    const input = screen.getByLabelText(/Search suppliers/i);
+    const input = screen.getByLabelText(/Search by supplier name or code/i);
     await user.clear(input);
     await user.type(input, "quantum");
 

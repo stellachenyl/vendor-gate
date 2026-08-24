@@ -49,8 +49,8 @@ export function DocumentVault({
             options={[
               { value: "all", label: "All statuses" },
               { value: "Approved", label: "Approved" },
-              { value: "Pending Review", label: "Pending Review" },
-              { value: "Conditional", label: "Conditional" },
+              { value: "Pending", label: "Pending" },
+              { value: "Rejected", label: "Rejected" },
             ]}
             className="!w-44 !py-1.5"
           />

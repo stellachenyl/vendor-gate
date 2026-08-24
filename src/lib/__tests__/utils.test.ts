@@ -1,4 +1,4 @@
-import { cn, exportToCsv, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, daysSince, exportToCsv, formatCurrency, formatDate } from "@/lib/utils";
 
 describe("cn", () => {
   it("joins truthy class names and drops falsy values", () => {
@@ -13,18 +13,44 @@ describe("cn", () => {
 });
 
 describe("formatDate", () => {
-  it("formats ISO dates in UTC regardless of machine timezone", () => {
-    expect(formatDate("2026-08-01")).toBe("Aug 01, 2026");
-    expect(formatDate("2026-12-31")).toBe("Dec 31, 2026");
-    expect(formatDate("2025-09-12")).toBe("Sep 12, 2025");
+  it("formats ISO dates as dd MMM yyyy in UTC regardless of machine timezone", () => {
+    expect(formatDate("2026-08-01")).toBe("01 Aug 2026");
+    expect(formatDate("2026-12-31")).toBe("31 Dec 2026");
+    expect(formatDate("2025-09-12")).toBe("12 Sep 2025");
+  });
+
+  it("zero-pads single-digit days (dd contract)", () => {
+    expect(formatDate("2026-03-05")).toBe("05 Mar 2026");
   });
 
   it("keeps a date stable at UTC day boundaries (backwards compatibility with stored ISO dates)", () => {
-    expect(formatDate("2026-01-01T23:30:00Z")).toBe("Jan 01, 2026");
+    expect(formatDate("2026-01-01T23:30:00Z")).toBe("01 Jan 2026");
   });
 
   it("reports Invalid Date for malformed input rather than throwing", () => {
     expect(formatDate("not-a-date")).toBe("Invalid Date");
+  });
+});
+
+describe("daysSince", () => {
+  const now = new Date("2026-08-24T15:00:00Z"); // freeze explicitly via param
+
+  it("counts whole days back to the raised date", () => {
+    expect(daysSince("2026-08-12", now)).toBe(12);
+    expect(daysSince("2026-08-01", now)).toBe(23);
+  });
+
+  it("returns 0 for today and for future dates (no negative open counters)", () => {
+    expect(daysSince("2026-08-24T09:00:00Z", now)).toBe(0);
+    expect(daysSince("2026-08-30", now)).toBe(0);
+  });
+
+  it("handles UTC day boundaries: yesterday 23:59 is one full day ago", () => {
+    expect(daysSince("2026-08-23T23:59:59Z", now)).toBe(1);
+  });
+
+  it("returns 0 for invalid input instead of NaN", () => {
+    expect(daysSince("garbage", now)).toBe(0);
   });
 });
 

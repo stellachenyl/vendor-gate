@@ -14,9 +14,6 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://quality.totalonics.com",
-  ),
   title: {
     default: "Totalonics Quality — Supplier Quality Portal",
     template: "%s · Totalonics Quality",

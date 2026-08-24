@@ -40,15 +40,22 @@ export function DataTable<T>({
   const sorted = useMemo(() => {
     if (!sort) return data;
     const col = columns.find((c) => c.key === sort.key);
-    const getVal = (row: T): string | number =>
-      col?.value ? col.value(row) : String(row[sort.key as keyof T] ?? "");
+    // Keep the raw value so numeric fields compare numerically instead of
+    // lexicographically; only stringify when the column carries no value.
+    const getVal = (row: T): string | number => {
+      const raw =
+        col && col.value
+          ? col.value(row)
+          : (row[sort.key as keyof T] as string | number | undefined);
+      return raw ?? "";
+    };
     return [...data].sort((a, b) => {
       const va = getVal(a);
       const vb = getVal(b);
       const cmp =
         typeof va === "number" && typeof vb === "number"
           ? va - vb
-          : String(va).localeCompare(String(vb));
+          : String(va).localeCompare(String(vb), undefined, { numeric: true });
       return sort.direction === "asc" ? cmp : -cmp;
     });
   }, [data, sort, columns]);

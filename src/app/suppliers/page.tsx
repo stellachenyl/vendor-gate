@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { DataTable } from "@/components/data/DataTable";
 import { RiskTierBadge } from "@/components/quality/PriorityBadge";
 import { SupplierScorecard } from "@/components/quality/SupplierScorecard";
@@ -13,8 +14,19 @@ import type { Supplier } from "@/lib/types";
 const RISKS = ["All", "Low", "Medium", "High", "Critical"] as const;
 
 export default function SuppliersPage() {
+  // useSearchParams requires a Suspense boundary during static prerender.
+  return (
+    <Suspense fallback={null}>
+      <SuppliersPageContent />
+    </Suspense>
+  );
+}
+
+function SuppliersPageContent() {
   const { canView, role } = useRole();
-  const [query, setQuery] = useState("");
+  // The global navbar search routes here with ?q=; seed the filter from it.
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [riskFilter, setRiskFilter] = useState<(typeof RISKS)[number]>("All");
 
   const visible = useMemo(() => suppliers.filter((s) => canView(s.id)), [canView]);

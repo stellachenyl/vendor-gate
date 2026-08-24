@@ -124,7 +124,7 @@ export default function DashboardPage() {
     .sort((a, b) => b.raisedDate.localeCompare(a.raisedDate))
     .slice(0, 5);
   const upcomingAudits = audits
-    .filter((a) => a.date >= "2026-08-24" && a.status !== "Completed")
+    .filter((a) => a.date >= new Date().toISOString().slice(0, 10) && a.status !== "Completed")
     .slice(0, 4);
 
   const worstColumns = [

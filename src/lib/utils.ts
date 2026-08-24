@@ -19,9 +19,16 @@ export function formatCurrency(amount: number): string {
   });
 }
 
+/** Leading characters Excel/LibreOffice interpret as formulas (CWE-1236). */
+const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
 /** Escapes a single CSV cell, wrapping in quotes when required. */
 function escapeCell(value: string | number): string {
-  const str = String(value);
+  let str = String(value);
+  // Neutralize spreadsheet formula injection by prefixing a single quote.
+  if (FORMULA_PREFIX.test(str)) {
+    str = "'" + str;
+  }
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {
     return '"' + str.replace(/"/g, '""') + '"';
   }

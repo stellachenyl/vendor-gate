@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply bg-canvas text-slate-800;
+  }
+  /* Visible keyboard focus across the portal (audit-ready accessibility) */
+  :focus-visible {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .page-title {
+    @apply text-xl font-bold tracking-tight text-slate-900;
+  }
+  .card {
+    @apply rounded-lg border border-line bg-card shadow-card;
+  }
+}

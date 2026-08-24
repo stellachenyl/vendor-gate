@@ -1,0 +1,17 @@
+{
+  "name": "Totalonics Quality — Supplier Quality Portal",
+  "short_name": "Totalonics QP",
+  "description": "Vendor performance, incoming inspection, and corrective action management for Totalonics Industrial Systems.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#1D4ED8",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

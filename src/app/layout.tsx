@@ -14,7 +14,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://quality.totalonics.com"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://quality.totalonics.com",
+  ),
   title: {
     default: "Totalonics Quality — Supplier Quality Portal",
     template: "%s · Totalonics Quality",
@@ -31,6 +33,20 @@ export const metadata: Metadata = {
   ],
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon.svg" },
+  openGraph: {
+    type: "website",
+    siteName: "Totalonics Quality",
+    url: "/",
+    title: "Totalonics Quality — Supplier Quality Portal",
+    description:
+      "Vendor performance scorecards, AQL-based incoming inspections, and 8D corrective action tracking. ISO 9001 & IATF 16949 aligned.",
+  },
+  twitter: {
+    card: "summary",
+    title: "Totalonics Quality — Supplier Quality Portal",
+    description:
+      "Vendor performance scorecards, incoming inspections, and 8D corrective actions in one audit-ready portal.",
+  },
 };
 
 export const viewport: Viewport = {

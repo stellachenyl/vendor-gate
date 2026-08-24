@@ -15,37 +15,55 @@ function FieldLabel({ label, htmlFor }: { label?: string; htmlFor: string }) {
   );
 }
 
+function FieldError({ error, id }: { error?: string; id: string }) {
+  if (!error) return null;
+  return (
+    <p id={id} role="alert" className="mt-1 text-xs font-medium text-status-rejected">
+      {error}
+    </p>
+  );
+}
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  /** Inline validation message rendered under the field. */
+  error?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, id, className, ...props }, ref) => {
+  ({ label, id, className, error, ...props }, ref) => {
     const autoId = useId();
     const inputId = id ?? autoId;
+    const describedBy = error ? `${inputId}-error` : props["aria-describedby"];
     return (
       <div className="w-full">
         <FieldLabel label={label} htmlFor={inputId} />
         <input
           ref={ref}
           id={inputId}
-          className={cn(fieldClasses, className)}
+          className={cn(fieldClasses, error && "border-status-rejected", className)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
           {...props}
         />
+        <FieldError error={error} id={`${inputId}-error`} />
       </div>
     );
   },
 );
 Input.displayName = "Input";
 
-export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextareaProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
+  error?: string;
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, id, className, rows = 4, ...props }, ref) => {
+  ({ label, id, className, rows = 4, error, ...props }, ref) => {
     const autoId = useId();
     const inputId = id ?? autoId;
+    const describedBy = error ? `${inputId}-error` : props["aria-describedby"];
     return (
       <div className="w-full">
         <FieldLabel label={label} htmlFor={inputId} />
@@ -53,34 +71,48 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           id={inputId}
           rows={rows}
-          className={cn(fieldClasses, className)}
+          className={cn(fieldClasses, error && "border-status-rejected", className)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
           {...props}
         />
+        <FieldError error={error} id={`${inputId}-error`} />
       </div>
     );
   },
 );
 Textarea.displayName = "Textarea";
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps
+  extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   options: ReadonlyArray<{ value: string; label: string }>;
+  error?: string;
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, id, options, className, ...props }, ref) => {
+  ({ label, id, options, className, error, ...props }, ref) => {
     const autoId = useId();
     const inputId = id ?? autoId;
+    const describedBy = error ? `${inputId}-error` : props["aria-describedby"];
     return (
       <div className="w-full">
         <FieldLabel label={label} htmlFor={inputId} />
-        <select ref={ref} id={inputId} className={cn(fieldClasses, className)} {...props}>
+        <select
+          ref={ref}
+          id={inputId}
+          className={cn(fieldClasses, error && "border-status-rejected", className)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          {...props}
+        >
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
         </select>
+        <FieldError error={error} id={`${inputId}-error`} />
       </div>
     );
   },

@@ -167,7 +167,32 @@ export interface AuditEntry {
   status: AuditStatus;
   supplierId?: string;
   findingsSummary?: string;
+  findingsCount?: number;
   closureStatus?: "Closed" | "Open";
+  scope?: string;
+  checklistRef?: string;
+  team?: string[];
+}
+
+export type StaffRole = "Quality Manager" | "Quality Engineer" | "Supplier User";
+
+export interface UserAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: StaffRole;
+  status: "Active" | "Suspended";
+  lastActive: string;
+}
+
+export interface SeverityPolicy {
+  priority: Priority;
+  definition: string;
+  /** Business days to contain before escalation. */
+  containmentDays: number;
+  /** Business days to full 8D closure before escalation. */
+  closureDays: number;
+  escalateTo: string;
 }
 
 export interface DashboardStats {

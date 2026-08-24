@@ -51,7 +51,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={toast.id}
             role="status"
             className={cn(
-              "pointer-events-auto rounded-md border px-4 py-3 text-sm font-medium shadow-card",
+              "animate-slide-up pointer-events-auto rounded-md border px-4 py-3 text-sm font-medium shadow-card",
               variantStyles[toast.variant],
             )}
           >

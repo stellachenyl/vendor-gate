@@ -23,18 +23,32 @@ export function Modal({
   className,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
+
+    // Return-focus contract: remember the trigger so closing restores it.
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+
+    // Focus the first form control (falls back to the panel itself) so
+    // keyboard users land inside the dialog, not behind it.
+    const firstField = panelRef.current?.querySelector<HTMLElement>(
+      "input:not([type='hidden']), select, textarea",
+    );
+    (firstFocusableFallback(firstField) ?? panelRef.current)?.focus();
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
-    // Focus the dialog panel for keyboard users. Deliberately keyed on
-    // `open` only: re-running this on an unstable `onClose` identity would
-    // steal focus from inner inputs on every parent re-render while typing.
-    panelRef.current?.focus();
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      // Deliberately keyed on `open` only: re-running this effect on an
+      // unstable `onClose` identity would steal focus from inner inputs
+      // while typing (see Modal typing regression test).
+      previouslyFocused.current?.focus?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -42,7 +56,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+      className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
       role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -55,7 +69,7 @@ export function Modal({
         aria-label={title}
         tabIndex={-1}
         className={cn(
-          "w-full max-w-lg rounded-lg border border-line bg-card shadow-card outline-none",
+          "animate-scale-in w-full max-w-lg rounded-lg border border-line bg-card shadow-card outline-none",
           className,
         )}
       >
@@ -74,4 +88,10 @@ export function Modal({
       </div>
     </div>
   );
+}
+
+function firstFocusableFallback(
+  el: HTMLElement | null | undefined,
+): HTMLElement | null {
+  return el ?? null;
 }

@@ -101,7 +101,16 @@ function RoleMenu() {
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { role } = useRole();
   const [query, setQuery] = useState("");
+
+  const links = [
+    ...NAV_LINKS,
+    // Role-scoped destinations (RBAC surface area).
+    ...(role === "Quality Manager"
+      ? [{ href: "/settings", label: "Settings" }]
+      : [{ href: "/supplier-portal", label: "Supplier Portal" }]),
+  ];
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,7 +147,7 @@ export function Navbar() {
           aria-label="Primary"
           className="order-3 flex w-full gap-0.5 overflow-x-auto md:order-none md:w-auto"
         >
-          {NAV_LINKS.map((link) => {
+          {links.map((link) => {
             const active =
               link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (

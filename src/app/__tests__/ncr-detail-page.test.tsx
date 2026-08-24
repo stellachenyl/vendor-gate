@@ -63,7 +63,7 @@ describe("NCR detail page integration", () => {
     const { container } = renderDetail("NCR-2608");
 
     expect(
-      screen.getByRole("group", { name: /8D progress: 2 of 8 steps complete/ }),
+      screen.getByRole("group", { name: /8D progress: step 3 of 8, containment/ }),
     ).toBeInTheDocument();
     expect(container.querySelectorAll("[data-state='completed']")).toHaveLength(2);
     expect(container.querySelectorAll("[data-state='current']")).toHaveLength(1);
@@ -144,3 +144,4 @@ describe("NCR detail page integration", () => {
     expect(screen.getByText("NCR not found")).toBeInTheDocument();
   });
 });
+

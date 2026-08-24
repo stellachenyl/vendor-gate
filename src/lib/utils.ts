@@ -17,6 +17,22 @@ export function cn(...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(" ");
 }
 
+/**
+ * True when the user requested reduced motion at the OS level.
+ * SSR-safe: defaults to false when matchMedia is unavailable (tests/SSR).
+ */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Stagger delay in ms, collapsing to 0 under reduced motion. */
+export function staggerDelay(index: number, stepMs = 30): string {
+  return prefersReducedMotion() ? "0ms" : `${index * stepMs}ms`;
+}
+
 /** Formats an ISO date as "dd MMM yyyy" in UTC. */
 export function formatDate(iso: string): string {
   const date = new Date(iso);

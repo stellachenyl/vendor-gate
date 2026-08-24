@@ -63,7 +63,8 @@ describe("Supplier detail page integration", () => {
   it("lists this supplier's inspection history only (data isolation)", () => {
     renderDetail("SUP-003");
 
-    const table = screen.getByRole("table");
+    const section = screen.getByRole("region", { name: /Inspection history/i });
+    const table = within(section).getByRole("table");
     expect(within(table).getAllByText(/LOT-2026-/).length).toBe(2); // SUP-003 has 2 lots
     expect(
       within(table).queryByText(/Bracket Stamping LH/),

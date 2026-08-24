@@ -17,7 +17,7 @@ describe("EightDStepper states", () => {
     const { container } = render(<EightDStepper progress={eightDSteps(3)} />);
 
     expect(
-      screen.getByRole("group", { name: /8D progress: 3 of 8 steps complete/ }),
+      screen.getByRole("group", { name: /8D progress: step 4 of 8, root cause/ }),
     ).toBeInTheDocument();
     expect(dots(container)).toHaveLength(8);
     expect(container.querySelectorAll("[data-state='completed']")).toHaveLength(3);
@@ -110,33 +110,85 @@ describe("UploadZone (mock)", () => {
     return drop;
   }
 
-  it("queues dropped files and reports them by name", async () => {
-    renderZone();
-    const zone = screen.getByRole("button", { name: /Upload document/i });
-    act(() => {
-      zone.dispatchEvent(
-        dropEvent([
-          new File(["x"], "a.pdf", { type: "application/pdf" }),
-          new File(["y"], "b.xlsx", { type: "application/vnd.ms-excel" }),
-        ]),
-      );
-    });
+  function file(name: string, sizeBytes = 100): File {
+    const f = new File(["x".repeat(8)], name);
+    Object.defineProperty(f, "size", { value: sizeBytes });
+    return f;
+  }
 
-    expect(await screen.findByRole("status")).toHaveTextContent(/a\.pdf, b\.xlsx/);
+  beforeEach(() => {
+    jest.useFakeTimers();
   });
 
-  it("reports an error toast when a drop contains no files", async () => {
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
+  function drop(zone: HTMLElement, files: File[]) {
+    act(() => {
+      zone.dispatchEvent(dropEvent(files));
+    });
+  }
+
+  it("validates and animates a 2-second upload for accepted files", () => {
     renderZone();
     const zone = screen.getByRole("button", { name: /Upload document/i });
-    act(() => {
-      zone.dispatchEvent(dropEvent([]));
-    });
 
-    expect(await screen.findByRole("status")).toHaveTextContent(/No files detected/i);
+    drop(zone, [file("cert.pdf")]);
+    // Progress bar appears immediately at 0% and animates to completion.
+    const bar = screen.getByRole("progressbar", { name: /Uploading cert\.pdf/ });
+    expect(bar).toHaveAttribute("aria-valuenow", "0");
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(bar.getAttribute("aria-valuenow")).toBe("100");
+    expect(screen.getByRole("status")).toHaveTextContent(/Upload complete/i);
+  });
+
+  it("rejects unsupported formats with a helpful message", () => {
+    renderZone();
+    const zone = screen.getByRole("button", { name: /Upload document/i });
+    drop(zone, [file("macro.exe")]);
+
+    expect(screen.getByRole("status")).toHaveTextContent(/Unsupported format.*exe/i);
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("rejects files over the 10MB limit", () => {
+    renderZone();
+    const zone = screen.getByRole("button", { name: /Upload document/i });
+    drop(zone, [file("huge.pdf", 11 * 1024 * 1024)]);
+
+    expect(screen.getByRole("status")).toHaveTextContent(/File exceeds 10MB limit/i);
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("accepts multiple valid files in one drop", () => {
+    renderZone();
+    const zone = screen.getByRole("button", { name: /Upload document/i });
+    drop(zone, [file("a.pdf"), file("b.xlsx")]);
+
+    expect(
+      screen.getByRole("progressbar", { name: /Uploading a\.pdf/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("progressbar", { name: /Uploading b\.xlsx/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("does nothing harmful when a drop contains no files", () => {
+    renderZone();
+    const zone = screen.getByRole("button", { name: /Upload document/i });
+    drop(zone, []);
+
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("opens the file browser on keyboard activation (Enter)", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     renderZone();
     const clickSpy = jest
       .spyOn(HTMLInputElement.prototype, "click")
@@ -147,3 +199,4 @@ describe("UploadZone (mock)", () => {
     clickSpy.mockRestore();
   });
 });
+

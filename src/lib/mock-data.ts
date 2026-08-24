@@ -3,7 +3,9 @@ import type {
   DashboardStats,
   InspectionRecord,
   NonConformanceReport,
+  SeverityPolicy,
   Supplier,
+  UserAccount,
   VaultDocument,
 } from "./types";
 
@@ -1158,6 +1160,10 @@ export const audits: AuditEntry[] = [
     date: "2026-08-27",
     status: "Scheduled",
     supplierId: "SUP-004",
+    scope: "Stamping cells 1–3, tooling maintenance, NCR-2608 corrective actions.",
+    checklistRef: "IATF 16949 §8.5.1 / CQI-9 Rev.4",
+    team: ["R. Okafor (lead)", "L. Brennan", "Dale Kowalski (guide)"],
+    findingsCount: 0,
   },
   {
     id: "AUD-2632",
@@ -1166,6 +1172,10 @@ export const audits: AuditEntry[] = [
     location: "Totalonics Goods-In Lab — Bay 4",
     date: "2026-08-29",
     status: "In Progress",
+    findingsCount: 0,
+    scope: "Quarterly re-verification of goods-in sampling plans and gauge R&R.",
+    checklistRef: "QP-9.1.2 Product Audit Checklist v3",
+    team: ["M. Delgado (lead)", "T. Nakamura"],
   },
   {
     id: "AUD-2633",
@@ -1175,6 +1185,10 @@ export const audits: AuditEntry[] = [
     date: "2026-09-03",
     status: "Scheduled",
     supplierId: "SUP-008",
+    scope: "Follow-up on AUD-2619 major findings; SPC deployment verification.",
+    checklistRef: "QMS System Audit Checklist v7",
+    team: ["L. Brennan (lead)", "J. Whitfield"],
+    findingsCount: 0,
   },
   {
     id: "AUD-2630",
@@ -1183,6 +1197,10 @@ export const audits: AuditEntry[] = [
     location: "Totalonics HQ — Building 1",
     date: "2026-09-15",
     status: "Scheduled",
+    scope: "ISO 9001:2015 / IATF 16949:2016 certificate maintenance visit.",
+    checklistRef: "BSI surveillance plan 2026",
+    team: ["Quality Manager", "Document Control"],
+    findingsCount: 0,
   },
   {
     id: "AUD-2628",
@@ -1192,7 +1210,12 @@ export const audits: AuditEntry[] = [
     date: "2026-07-30",
     status: "Completed",
     supplierId: "SUP-003",
-    findingsSummary: "2 minor findings: calibration records gap (gauge G-114); outdated work instruction at molding cell.",
+    scope: "Full QMS system audit ahead of volume ramp for sensor boards.",
+    checklistRef: "QMS System Audit Checklist v7",
+    team: ["J. Whitfield (lead)", "Melissa Tan (guide)"],
+    findingsSummary:
+      "2 minor findings: calibration records gap (gauge G-114); outdated work instruction at molding cell.",
+    findingsCount: 2,
     closureStatus: "Closed",
   },
   {
@@ -1203,7 +1226,12 @@ export const audits: AuditEntry[] = [
     date: "2026-07-16",
     status: "Overdue",
     supplierId: "SUP-010",
-    findingsSummary: "1 major finding (rack qualification lapse, see NCR-2598); 1 minor (chemical control log).",
+    scope: "Anodizing line process controls following coating thickness escapes.",
+    checklistRef: "CQI-12 Coating Systems Assessment",
+    team: ["R. Okafor (lead)"],
+    findingsSummary:
+      "1 major finding (rack qualification lapse, see NCR-2598); 1 minor (chemical control log).",
+    findingsCount: 2,
     closureStatus: "Open",
   },
   {
@@ -1214,7 +1242,12 @@ export const audits: AuditEntry[] = [
     date: "2026-03-05",
     status: "Completed",
     supplierId: "SUP-008",
-    findingsSummary: "2 majors: SPC not applied to grinding cells; training matrix incomplete. 3 minors.",
+    scope: "Triennial full-system audit of Redstone machining operations.",
+    checklistRef: "QMS System Audit Checklist v6",
+    team: ["L. Brennan (lead)", "R. Okafor", "Carl Yoder (guide)"],
+    findingsSummary:
+      "2 majors: SPC not applied to grinding cells; training matrix incomplete. 3 minors.",
+    findingsCount: 5,
     closureStatus: "Closed",
   },
   {
@@ -1224,10 +1257,77 @@ export const audits: AuditEntry[] = [
     location: "Totalonics HQ — Building 1",
     date: "2025-09-12",
     status: "Completed",
+    scope: "Annual certificate surveillance visit.",
+    checklistRef: "BSI surveillance plan 2025",
     findingsSummary: "No nonconformities. 2 opportunities for improvement noted.",
+    findingsCount: 0,
     closureStatus: "Closed",
   },
 ];
+
+/** Portal user directory rendered by /settings. */
+export const portalUsers: UserAccount[] = [
+  { id: "USR-01", name: "Dana Reyes", email: "d.reyes@totalonics.com", role: "Quality Manager", status: "Active", lastActive: "2026-08-24" },
+  { id: "USR-02", name: "Liam Brennan", email: "l.brennan@totalonics.com", role: "Quality Engineer", status: "Active", lastActive: "2026-08-24" },
+  { id: "USR-03", name: "Rosa Okafor", email: "r.okafor@totalonics.com", role: "Quality Engineer", status: "Active", lastActive: "2026-08-21" },
+  { id: "USR-04", name: "Jun Nakamura", email: "j.nakamura@totalonics.com", role: "Quality Engineer", status: "Active", lastActive: "2026-08-23" },
+  { id: "USR-05", name: "Melissa Tan", email: "qa@goldencircuit.com", role: "Supplier User", status: "Active", lastActive: "2026-08-20" },
+  { id: "USR-06", name: "Carl Yoder", email: "plant@redstonemw.com", role: "Supplier User", status: "Suspended", lastActive: "2026-06-30" },
+];
+
+/** NCR severity definitions with escalation rules (/settings). */
+export const severityPolicies: SeverityPolicy[] = [
+  {
+    priority: "Critical",
+    definition: "Affects safety, regulatory compliance, or stops the customer line.",
+    containmentDays: 1,
+    closureDays: 20,
+    escalateTo: "VP Operations + Supplier Executive",
+  },
+  {
+    priority: "Major",
+    definition: "Functional defect or repeated escape likely reaching the customer.",
+    containmentDays: 3,
+    closureDays: 30,
+    escalateTo: "Quality Manager",
+  },
+  {
+    priority: "Minor",
+    definition: "Isolated, non-functional deviation fully contained at goods-in.",
+    containmentDays: 5,
+    closureDays: 45,
+    escalateTo: "SQE Lead",
+  },
+  {
+    priority: "Observation",
+    definition: "Improvement opportunity with no product impact.",
+    containmentDays: 10,
+    closureDays: 60,
+    escalateTo: "SQE Lead (review only)",
+  },
+];
+
+/** ANSI/ASQ Z1.4 sampling plans offered in /settings (lot-size band → sample). */
+export const aqlSamplingPlans = [
+  { lotBand: "2 – 8", sampleSize: 2, accept: 0, reject: 1 },
+  { lotBand: "9 – 15", sampleSize: 3, accept: 0, reject: 1 },
+  { lotBand: "16 – 25", sampleSize: 5, accept: 0, reject: 1 },
+  { lotBand: "26 – 50", sampleSize: 8, accept: 0, reject: 1 },
+  { lotBand: "51 – 90", sampleSize: 13, accept: 1, reject: 2 },
+  { lotBand: "91 – 150", sampleSize: 20, accept: 1, reject: 2 },
+  { lotBand: "151 – 280", sampleSize: 32, accept: 2, reject: 3 },
+  { lotBand: "281 – 500", sampleSize: 50, accept: 3, reject: 4 },
+  { lotBand: "501 – 1200", sampleSize: 80, accept: 5, reject: 6 },
+  { lotBand: "1201 – 3200", sampleSize: 125, accept: 7, reject: 8 },
+];
+
+/** Document retention defaults (/settings). Years from approval. */
+export const retentionPolicies = [
+  { docType: "PPAP", years: 15 },
+  { docType: "Certificate", years: 5 },
+  { docType: "Audit Report", years: 10 },
+  { docType: "SOP", years: 7 },
+] as const;
 
 /** Derives the dashboard KPI block deterministically from the mock corpus. */
 export function computeDashboardStats(todayIso: string): DashboardStats {

@@ -1,5 +1,8 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { Priority, RiskTier } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, prefersReducedMotion } from "@/lib/utils";
 
 const priorityStyles: Record<Priority, string> = {
   Critical: "bg-red-50 text-red-700 border-status-rejected",
@@ -43,11 +46,26 @@ const riskText: Record<RiskTier, string> = {
 };
 
 export function RiskTierBadge({ tier }: { tier: RiskTier }) {
+  // Bounce once whenever the tier changes (skipped under reduced motion).
+  const [bump, setBump] = useState(false);
+  const prevTier = useRef(tier);
+
+  useEffect(() => {
+    if (prevTier.current === tier) return;
+    prevTier.current = tier;
+    if (prefersReducedMotion()) return;
+    setBump(true);
+    const timer = window.setTimeout(() => setBump(false), 400);
+    return () => window.clearTimeout(timer);
+  }, [tier]);
+
   return (
     <span
+      data-bump={bump || undefined}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold",
         riskText[tier],
+        bump && "animate-bounce-once",
       )}
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", riskDot[tier])} aria-hidden />

@@ -49,19 +49,19 @@ describe("NonConformanceReportCard", () => {
   });
 
   it("marks exactly the completed D-steps and exposes progress to assistive tech", () => {
-    render(<NonConformanceReportCard ncr={openNcr} today={TODAY} />);
+    const { container } = render(<NonConformanceReportCard ncr={openNcr} today={TODAY} />);
 
     const group = screen.getByRole("group", {
-      name: /8D progress: 2 of 8 steps complete/,
+      name: /8D progress: step 3 of 8, containment/,
     });
     expect(group).toBeInTheDocument();
 
-    const circles = document.querySelectorAll("ol > li span:first-child");
-    expect(circles).toHaveLength(8);
+    const dots = container.querySelectorAll("[data-state]");
+    expect(dots).toHaveLength(8);
     // Completed steps show a checkmark; pending steps show their number.
-    expect(circles[0]).toHaveTextContent("\u2713");
-    expect(circles[2]).toHaveTextContent("3");
-    expect(circles[7]).toHaveTextContent("8");
+    expect(dots[0]).toHaveTextContent("\u2713");
+    expect(dots[2]).toHaveTextContent("3");
+    expect(dots[7]).toHaveTextContent("8");
   });
 
   it("displays the identified root cause category once D4 is complete", () => {
@@ -69,7 +69,7 @@ describe("NonConformanceReportCard", () => {
 
     expect(screen.getByText("Tooling Wear")).toBeInTheDocument();
     expect(
-      screen.getByRole("group", { name: /8D progress: 8 of 8 steps complete/ }),
+      screen.getByRole("group", { name: /8D progress: complete, all 8 steps done/ }),
     ).toBeInTheDocument();
     expect(screen.getByText("Closed")).toBeInTheDocument();
   });
@@ -85,3 +85,4 @@ describe("NonConformanceReportCard", () => {
     expect(screen.getByText(/Team: 4 member\(s\)/)).toBeInTheDocument();
   });
 });
+

@@ -1,9 +1,12 @@
 import type { KpiScores, Supplier } from "@/lib/types";
+import { prefersReducedMotion, staggerDelay } from "@/lib/utils";
 
 const SIZE = 220;
 const CENTER = SIZE / 2;
 const RADIUS = 80;
 const LEVELS = 4;
+/** Stagger between axis draw-ins (spec: 100ms). */
+const AXIS_STAGGER_MS = 100;
 
 const AXES: ReadonlyArray<{ key: keyof KpiScores; label: string }> = [
   { key: "quality", label: "Quality" },
@@ -80,9 +83,10 @@ export function SupplierScorecard({ supplier }: { supplier: Supplier }) {
             strokeWidth="1"
           />
         ))}
-        {/* Axes */}
+        {/* Axes — draw in sequentially, 100ms stagger (reduced-motion safe) */}
         {AXES.map((_, i) => {
           const [x, y] = pointFor(i, 1);
+          const animate = !prefersReducedMotion();
           return (
             <line
               key={i}
@@ -90,8 +94,16 @@ export function SupplierScorecard({ supplier }: { supplier: Supplier }) {
               y1={CENTER}
               x2={x}
               y2={y}
-              stroke="#E2E8F0"
-              strokeWidth="1"
+              stroke="#94A3B8"
+              strokeWidth="1.5"
+              pathLength={animate ? 100 : undefined}
+              strokeDasharray={animate ? 100 : undefined}
+              className={animate ? "animate-axis-draw" : undefined}
+              style={
+                animate
+                  ? { animationDelay: staggerDelay(i, AXIS_STAGGER_MS) }
+                  : undefined
+              }
             />
           );
         })}
@@ -103,10 +115,30 @@ export function SupplierScorecard({ supplier }: { supplier: Supplier }) {
           stroke="#1D4ED8"
           strokeWidth="2"
         />
-        {/* Vertices */}
+        {/* Vertices pop in after their axis finishes drawing */}
         {AXES.map((axis, i) => {
           const [x, y] = pointFor(i, supplier.kpis[axis.key] / 100);
-          return <circle key={axis.key} cx={x} cy={y} r="3" fill="#1D4ED8" />;
+          const animate = !prefersReducedMotion();
+          return (
+            <circle
+              key={axis.key}
+              cx={x}
+              cy={y}
+              r="3"
+              fill="#1D4ED8"
+              className={animate ? "animate-check-in" : undefined}
+              style={
+                animate
+                  ? {
+                      animationDelay: staggerDelay(
+                        i,
+                        AXIS_STAGGER_MS + 300,
+                      ),
+                    }
+                  : undefined
+              }
+            />
+          );
         })}
         {/* Labels */}
         {AXES.map((axis, i) => {
@@ -126,6 +158,25 @@ export function SupplierScorecard({ supplier }: { supplier: Supplier }) {
           );
         })}
       </svg>
+
+      {/* Screen-reader alternative to the radar graphic (a11y contract). */}
+      <table className="sr-only">
+        <caption>{`KPI values for ${supplier.name}`}</caption>
+        <thead>
+          <tr>
+            <th scope="col">KPI</th>
+            <th scope="col">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {AXES.map((axis) => (
+            <tr key={axis.key}>
+              <th scope="row">{axis.label}</th>
+              <td>{`${supplier.kpis[axis.key]} of 100`}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3 text-center">
         <div>

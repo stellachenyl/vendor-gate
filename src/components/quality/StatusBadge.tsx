@@ -1,6 +1,5 @@
 import type { ApprovalStatus, AuditStatus, Disposition, NcrStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
 type Tone = "green" | "amber" | "red" | "indigo" | "slate" | "blue";
 
 const toneClasses: Record<Tone, string> = {
@@ -68,5 +67,13 @@ const auditTones: Record<AuditStatus, Tone> = {
 };
 
 export function AuditStatusBadge({ status }: { status: AuditStatus }) {
-  return <Badge tone={auditTones[status]}>{status}</Badge>;
+  // Overdue pairs a breathing halo with the text label (never color alone).
+  return (
+    <span
+      data-overdue={status === "Overdue" || undefined}
+      className={cn(status === "Overdue" && "animate-pulse-glow rounded-full")}
+    >
+      <Badge tone={auditTones[status]}>{status}</Badge>
+    </span>
+  );
 }

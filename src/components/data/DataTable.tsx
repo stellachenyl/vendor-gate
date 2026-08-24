@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { cn, exportToCsv } from "@/lib/utils";
+import { cn, exportToCsv, prefersReducedMotion, staggerDelay } from "@/lib/utils";
 
 export interface Column<T> {
   key: string;
@@ -28,17 +28,38 @@ interface DataTableProps<T> {
 
 type SortState = { key: string; direction: "asc" | "desc" } | null;
 
+/** Rows per page when the caller does not pin a size. */
+export const DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * Windowing kicks in well above the pagination page size so normal tables
+ * never pay for it; large ad-hoc pages (>100 rows) stay DOM-light.
+ */
+const VIRTUAL_THRESHOLD = 60;
+const VIRTUAL_ROW_HEIGHT = 44;
+const VIRTUAL_VIEWPORT = 440;
+const VIRTUAL_OVERSCAN = 6;
+
 export function DataTable<T>({
   columns,
   data,
   rowKey,
-  pageSize = 8,
+  pageSize = DEFAULT_PAGE_SIZE,
   csvFilename,
   caption,
   onRowClick,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortState>(null);
+  const reducedMotion = useMemo(() => prefersReducedMotion(), []);
+
+  // Row stagger replays whenever the dataset identity changes (filter/sort),
+  // implemented by re-keying rows with an epoch counter.
+  const [staggerEpoch, setStaggerEpoch] = useState(0);
+  const dataSignature = data.map((d) => rowKey(d)).join("|");
+  useEffect(() => {
+    setStaggerEpoch((e) => e + 1);
+  }, [dataSignature]);
 
   const sorted = useMemo(() => {
     if (!sort) return data;
@@ -66,6 +87,34 @@ export function DataTable<T>({
   const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
   const safePage = Math.min(page, pageCount);
   const pageRows = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  // --- Virtual scrolling for oversized pages -------------------------------
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const virtualizing = pageRows.length > VIRTUAL_THRESHOLD;
+
+  useEffect(() => {
+    setScrollTop(0);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [safePage, dataSignature, sort]);
+
+  let visibleRows = pageRows;
+  let padTop = 0;
+  let padBottom = 0;
+  if (virtualizing) {
+    const start = Math.max(
+      0,
+      Math.floor(scrollTop / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN,
+    );
+    const end = Math.min(
+      pageRows.length,
+      Math.ceil((scrollTop + VIRTUAL_VIEWPORT) / VIRTUAL_ROW_HEIGHT) +
+        VIRTUAL_OVERSCAN,
+    );
+    visibleRows = pageRows.slice(start, end);
+    padTop = start * VIRTUAL_ROW_HEIGHT;
+    padBottom = (pageRows.length - end) * VIRTUAL_ROW_HEIGHT;
+  }
 
   const handleSort = (key: string) => {
     setPage(1);
@@ -102,9 +151,21 @@ export function DataTable<T>({
           Export CSV
         </Button>
       </div>
-      <div className="overflow-x-auto">
+      <div
+        ref={scrollRef}
+        className={cn(
+          "overflow-x-auto",
+          virtualizing && "overflow-y-auto",
+        )}
+        style={virtualizing ? { maxHeight: VIRTUAL_VIEWPORT } : undefined}
+        onScroll={
+          virtualizing
+            ? (e) => setScrollTop(e.currentTarget.scrollTop)
+            : undefined
+        }
+      >
         <table className="w-full text-sm">
-          <thead>
+          <thead className={cn(virtualizing && "sticky top-0 bg-slate-50 z-10")}>
             <tr className="border-y border-line bg-slate-50/70">
               {columns.map((col) => {
                 const isSorted = sort?.key === col.key;
@@ -149,7 +210,12 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody>
-            {pageRows.length === 0 ? (
+            {padTop > 0 ? (
+              <tr aria-hidden style={{ height: padTop }}>
+                <td colSpan={columns.length} />
+              </tr>
+            ) : null}
+            {visibleRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}
@@ -159,11 +225,16 @@ export function DataTable<T>({
                 </td>
               </tr>
             ) : (
-              pageRows.map((row) => (
+              visibleRows.map((row, rowIndex) => (
                 <tr
-                  key={rowKey(row)}
+                  key={`${staggerEpoch}:${rowKey(row)}`}
+                  style={
+                    reducedMotion
+                      ? undefined
+                      : { animationDelay: staggerDelay(rowIndex, 30) }
+                  }
                   className={cn(
-                    "border-b border-line last:border-b-0",
+                    "animate-fade-in-row border-b border-line last:border-b-0",
                     onRowClick
                       ? "cursor-pointer hover:bg-accent-soft/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
                       : "hover:bg-accent-soft/40",
@@ -197,6 +268,11 @@ export function DataTable<T>({
                 </tr>
               ))
             )}
+            {padBottom > 0 ? (
+              <tr aria-hidden style={{ height: padBottom }}>
+                <td colSpan={columns.length} />
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>

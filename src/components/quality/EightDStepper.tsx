@@ -6,17 +6,25 @@ export interface EightDStepperProps {
   size?: "sm" | "lg";
 }
 
+function ariaLabel(progress: ReadonlyArray<NcrStep>): string {
+  const done = progress.filter((s) => s.done).length;
+  if (done >= progress.length) {
+    return "8D progress: complete, all 8 steps done";
+  }
+  const current = progress[done]!;
+  return `8D progress: step ${done + 1} of 8, ${current.label.toLowerCase()}`;
+}
+
 /**
- * Visual D1–D8 stepper. Each step is completed (filled), current (first
- * pending — accent ring), or pending (muted).
+ * Visual D1–D8 stepper. Each step is completed (checkmark scales in),
+ * current (first pending — accent ring), or pending (muted).
  */
 export function EightDStepper({ progress, size = "sm" }: EightDStepperProps) {
-  const doneCount = progress.filter((s) => s.done).length;
   const currentIndex = progress.findIndex((s) => !s.done);
   const dotSize = size === "lg" ? "h-10 w-10 text-sm" : "h-7 w-7 text-[10px]";
 
   return (
-    <div role="group" aria-label={`8D progress: ${doneCount} of ${progress.length} steps complete`}>
+    <div role="group" aria-label={ariaLabel(progress)}>
       <ol className="flex flex-wrap gap-x-1 gap-y-2">
         {progress.map((step, i) => {
           const state =
@@ -37,7 +45,18 @@ export function EightDStepper({ progress, size = "sm" }: EightDStepperProps) {
                     state === "pending" && "border-line bg-slate-50 text-slate-400",
                   )}
                 >
-                  {step.done ? "\u2713" : step.step.replace("D", "")}
+                  {step.done ? (
+                    // Checkmark scales in over 200ms when a step completes.
+                    <span
+                      data-testid="step-check"
+                      className="animate-check-in inline-block"
+                      aria-hidden
+                    >
+                      ✓
+                    </span>
+                  ) : (
+                    step.step.replace("D", "")
+                  )}
                 </span>
                 <span
                   className={cn(

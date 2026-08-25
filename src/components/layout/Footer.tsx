@@ -37,16 +37,16 @@ export function Footer() {
             Quality Department
             <br />
             <a
-              href="mailto:quality@totalonics.com"
+              href="mailto:quality@acme.com"
               className="font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             >
-              quality@totalonics.com
+              quality@acme.com
             </a>
           </p>
         </div>
       </div>
       <div className="border-t border-line py-3 text-center text-xs text-slate-400">
-        © {new Date().getFullYear()} Totalonics Industrial Systems · Supplier Quality
+        © {new Date().getFullYear()} acme Industrial Systems · Supplier Quality
         Portal v1.0
       </div>
     </footer>

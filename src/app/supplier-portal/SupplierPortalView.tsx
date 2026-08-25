@@ -188,13 +188,13 @@ export default function SupplierPortalView() {
             <h2 className="mb-2 text-sm font-semibold text-slate-800">Your Quality Team</h2>
             <dl className="space-y-1 text-sm text-slate-600">
               <dt className="font-medium text-slate-700">SQE Lead</dt>
-              <dd>M. Delgado · m.delgado@totalonics.com</dd>
+              <dd>M. Delgado · m.delgado@acme.com</dd>
               <dt className="pt-1 font-medium text-slate-700">Quality Manager</dt>
-              <dd>Dana Reyes · d.reyes@totalonics.com</dd>
+              <dd>Dana Reyes · d.reyes@acme.com</dd>
               <dt className="pt-1 font-medium text-slate-700">Escalations</dt>
               <dd>
-                <a href="mailto:quality@totalonics.com" className="text-accent hover:underline">
-                  quality@totalonics.com
+                <a href="mailto:quality@acme.com" className="text-accent hover:underline">
+                  quality@acme.com
                 </a>
               </dd>
             </dl>
